@@ -64,6 +64,11 @@ public class BookWormGame {
     private Cursor hoverCursor;
     private Cursor defaultCursor;
 
+    private int comboMultiplier = 1; // Initialize combo multiplier
+    private int consecutiveValidWords = 0; // Track consecutive valid words
+
+    private Map<Character, Integer> letterValues = new HashMap<>();
+
     public BookWormGame() {
         // Load and set the custom font
         customFont = loadCustomFont("C:\\Users\\riadyn\\Documents\\NetBeansProjects\\JavaApplication1\\build\\font\\QuinqueFive.ttf");
@@ -195,14 +200,14 @@ public class BookWormGame {
         // Create a JLabel for the score image
         JLabel scoreBackground = new JLabel(scoreIcon);
         scoreBackground.setLayout(new BorderLayout());
-        scoreBackground.setText("0000");
+        scoreBackground.setText("00");
         scoreBackground.setHorizontalTextPosition(JLabel.CENTER);
         scoreBackground.setVerticalTextPosition(JLabel.CENTER);
         scoreBackground.setFont(customFont.deriveFont(Font.BOLD, 8f));
         scoreBackground.setForeground(Color.WHITE); // Set text color for visibility
 
         // Set bounds for score background
-        scoreBackground.setBounds(-55, 0, 200, 100); // Adjust x, y, width, height as needed
+        scoreBackground.setBounds(-50, 0, 200, 100); // Adjust x, y, width, height as needed
         backgroundPanel.add(scoreBackground);
 
         // Load and scale the book image
@@ -237,7 +242,7 @@ public class BookWormGame {
         controlPanel.add(healthPanel, BorderLayout.SOUTH);
 
         // Set bounds for healthPanel
-        healthPanel.setBounds(0, 5, 200, 50); // Adjust x, y, width, height
+        healthPanel.setBounds(0, 56, 200, 50); // Adjust x, y, width, height
         backgroundPanel.add(healthPanel);
 
         // Set bounds for controlPanel
@@ -309,10 +314,16 @@ public class BookWormGame {
                     wordHistory.add(word);
                     wordCountMap.put(word, wordCountMap.getOrDefault(word, 0) + 1);
                     updateHistoryArea();
-                    JOptionPane.showMessageDialog(frame, "Valid word! You scored " + score + " points.");
+                    
+                    // Show custom message dialog
+                    showCustomMessage("Valid word!", score);
                     
                     // Update the score label
                     scoreBackground.setText("" + totalScore);
+                    
+                    // Increase combo multiplier
+                    consecutiveValidWords++;
+                    comboMultiplier = Math.min(5, 1 + consecutiveValidWords / 3); // Max multiplier of 5
                     
                     // Write the submitted word to the image
                     String imagePath = "C:\\Users\\riadyn\\Documents\\NetBeansProjects\\JavaApplication1\\images\\spellbookForFlare.png";
@@ -322,8 +333,12 @@ public class BookWormGame {
                     // Update the image label with the new image
                     setImageLabel(outputPath, 400);
                 } else {
-                    JOptionPane.showMessageDialog(frame, "Invalid word. Try again.");
+                    showInvalidWordMessage();
                     loseHeart();
+
+                    // Reset combo multiplier
+                    consecutiveValidWords = 0;
+                    comboMultiplier = 1;
                 }
                 currentWord.setLength(0);
                 inputField.setText("");
@@ -461,6 +476,37 @@ public class BookWormGame {
         descriptionLabel.setForeground(Color.WHITE);
         descriptionLabel.setFont(new Font("Arial", Font.PLAIN, 14)); // Temporary font
 
+        initializeLetterValues();
+    }
+
+    private void initializeLetterValues() {
+        // Assign values to each letter
+        letterValues.put('a', 1);
+        letterValues.put('b', 3);
+        letterValues.put('c', 3);
+        letterValues.put('d', 2);
+        letterValues.put('e', 1);
+        letterValues.put('f', 4);
+        letterValues.put('g', 2);
+        letterValues.put('h', 4);
+        letterValues.put('i', 1);
+        letterValues.put('j', 8);
+        letterValues.put('k', 5);
+        letterValues.put('l', 1);
+        letterValues.put('m', 3);
+        letterValues.put('n', 1);
+        letterValues.put('o', 1);
+        letterValues.put('p', 3);
+        letterValues.put('q', 10);
+        letterValues.put('r', 1);
+        letterValues.put('s', 1);
+        letterValues.put('t', 1);
+        letterValues.put('u', 1);
+        letterValues.put('v', 4);
+        letterValues.put('w', 4);
+        letterValues.put('x', 8);
+        letterValues.put('y', 4);
+        letterValues.put('z', 10);
     }
 
     private void updateHistoryArea() {
@@ -476,7 +522,18 @@ public class BookWormGame {
     }
 
     private int calculateScore(String word) {
-        return word.length() * 10;
+        int baseScore = 0;
+        for (char letter : word.toCharArray()) {
+            baseScore += letterValues.getOrDefault(letter, 0);
+        }
+
+        // Apply variable word length bonus
+        int lengthBonus = (int) Math.pow(2, word.length() - 3); // Exponential bonus for words longer than 3 letters
+
+        // Calculate total score with combo multiplier
+        int totalScore = (baseScore + lengthBonus) * comboMultiplier;
+
+        return totalScore;
     }
 
     private void loadDictionary(String filePath) {
@@ -666,9 +723,12 @@ public class BookWormGame {
             hearts = Math.min(hearts + 1, maxHearts);
             inventory.put("Health Potion", inventory.get("Health Potion") - 1);
             updateHealthDisplay();
-            JOptionPane.showMessageDialog(null, "Used a Health Potion! Hearts: " + hearts);
+            
+            // Call the showHealthPotionMessage method here
+            showHealthPotionMessage(hearts);
         } else {
-            JOptionPane.showMessageDialog(null, "No Health Potions left or hearts are full!");
+            // Call the showNoHealthPotionMessage method here
+            showNoHealthPotionMessage();
         }
     }
 
@@ -852,6 +912,341 @@ public class BookWormGame {
         UIManager.put("OptionPane.messageFont", font);
         UIManager.put("OptionPane.buttonFont", font);
         // Add more components as needed
+    }
+
+    private void showCustomMessage(String message, int score) {
+        JDialog dialog = new JDialog(frame, "Message", true);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                ImageIcon icon = new ImageIcon("C:\\Users\\riadyn\\Documents\\NetBeansProjects\\JavaApplication1\\gui\\msgcard.png");
+                g.drawImage(icon.getImage(), 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        panel.setLayout(null); // Use null layout for absolute positioning
+        panel.setPreferredSize(new Dimension(280, 100)); // Adjust height for three messages
+        panel.setOpaque(false);
+
+        JLabel validWordLabel = new JLabel(message, JLabel.CENTER);
+        validWordLabel.setForeground(Color.WHITE);
+        validWordLabel.setFont(customFont.deriveFont(Font.BOLD, 8f)); // Use custom font
+        validWordLabel.setBounds(45, 15, 170, 30); // Set bounds for "Valid Word" message
+
+        JLabel scoreLabel = new JLabel("You scored " + score, JLabel.CENTER);
+        scoreLabel.setForeground(Color.WHITE);
+        scoreLabel.setFont(customFont.deriveFont(Font.BOLD, 8f)); // Use custom font
+        scoreLabel.setBounds(55, 35, 170, 30); // Set bounds for score message
+
+        JLabel pointsLabel = new JLabel("points.", JLabel.CENTER);
+        pointsLabel.setForeground(Color.WHITE);
+        pointsLabel.setFont(customFont.deriveFont(Font.BOLD, 8f)); // Use custom font
+        pointsLabel.setBounds(25, 50, 170, 30); // Set bounds for "points" message below the score
+
+        // Create a close button
+        JButton closeButton = new JButton("Close");
+        closeButton.setBounds(250, 20, 40, 60); // Adjust position and size as needed
+        closeButton.setForeground(Color.WHITE);
+        closeButton.setOpaque(false);
+        closeButton.setContentAreaFilled(false);
+        closeButton.setBorderPainted(false);
+        closeButton.setFocusPainted(false);
+        closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Add action listener to the close button
+        closeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dialog.dispose(); // Close the dialog
+            }
+        });
+
+        panel.add(validWordLabel);
+        panel.add(scoreLabel);
+        panel.add(pointsLabel); // Add the points label to the panel
+        panel.add(closeButton); // Add the close button to the panel
+
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(frame);
+
+        final Point[] initialClick = {null};
+
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                initialClick[0] = e.getPoint();
+            }
+        });
+
+        panel.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (initialClick[0] != null) {
+                    int thisX = dialog.getLocation().x;
+                    int thisY = dialog.getLocation().y;
+
+                    int xMoved = e.getX() - initialClick[0].x;
+                    int yMoved = e.getY() - initialClick[0].y;
+
+                    int X = thisX + xMoved;
+                    int Y = thisY + yMoved;
+                    dialog.setLocation(X, Y);
+                }
+            }
+        });
+
+        dialog.setVisible(true); // Show the dialog
+    }
+
+    private void showInvalidWordMessage() {
+        JDialog dialog = new JDialog(frame, "Message", true);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                ImageIcon icon = new ImageIcon("C:\\Users\\riadyn\\Documents\\NetBeansProjects\\JavaApplication1\\gui\\warningcard.png");
+                g.drawImage(icon.getImage(), 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        panel.setLayout(null); // Use null layout for absolute positioning
+        panel.setPreferredSize(new Dimension(280, 100)); // Adjust height for three messages
+        panel.setOpaque(false);
+
+        JLabel invalidWordLabel = new JLabel("INVALID WORD.", JLabel.CENTER);
+        invalidWordLabel.setForeground(Color.WHITE);
+        invalidWordLabel.setFont(customFont.deriveFont(Font.BOLD, 8f)); // Use custom font
+        invalidWordLabel.setBounds(12, 25, 260, 30); // Set bounds for the invalid word message
+
+        JLabel TryAgainLabel = new JLabel("TRY AGAIN.", JLabel.CENTER);
+        TryAgainLabel.setForeground(Color.WHITE);
+        TryAgainLabel.setFont(customFont.deriveFont(Font.BOLD, 8f)); // Use custom font
+        TryAgainLabel.setBounds(-3, 40, 260, 30); // Set bounds for the invalid word message
+
+
+        // Create a close button
+        JButton closeButton = new JButton("Close");
+        closeButton.setBounds(240, 15, 40, 80); // Adjust position and size as needed
+        closeButton.setForeground(Color.WHITE);
+        closeButton.setOpaque(false);
+        closeButton.setContentAreaFilled(false);
+        closeButton.setBorderPainted(false);
+        closeButton.setFocusPainted(false);
+        closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Add action listener to the close button
+        closeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dialog.dispose(); // Close the dialog
+            }
+        });
+
+        panel.add(TryAgainLabel);
+        panel.add(invalidWordLabel);
+        panel.add(closeButton); // Add the close button to the panel
+
+        dialog.add(panel);
+    dialog.pack();
+    dialog.setLocationRelativeTo(frame);
+
+    // Make the dialog movable
+    final Point[] initialClick = {null};
+
+    panel.addMouseListener(new MouseAdapter() {
+        @Override
+        public void mousePressed(MouseEvent e) {
+            initialClick[0] = e.getPoint(); // Store the initial click point
+        }
+    });
+
+    panel.addMouseMotionListener(new MouseMotionAdapter() {
+        @Override
+        public void mouseDragged(MouseEvent e) {
+            if (initialClick[0] != null) {
+                int thisX = dialog.getLocation().x;
+                int thisY = dialog.getLocation().y;
+
+                int xMoved = e.getX() - initialClick[0].x;
+                int yMoved = e.getY() - initialClick[0].y;
+
+                dialog.setLocation(thisX + xMoved, thisY + yMoved); // Move the dialog
+            }
+        }
+    });
+
+    dialog.setVisible(true); // Show the dialog
+}
+
+    private void showHealthPotionMessage(int hearts) {
+        JDialog dialog = new JDialog(frame, "Message", true);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                ImageIcon icon = new ImageIcon("C:\\Users\\riadyn\\Documents\\NetBeansProjects\\JavaApplication1\\gui\\infocard.png");
+                g.drawImage(icon.getImage(), 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        panel.setLayout(null); // Use null layout for absolute positioning
+        panel.setPreferredSize(new Dimension(280, 100)); // Adjust height for three messages
+        panel.setOpaque(false);
+
+        JLabel potionMessageLabel = new JLabel("YOU USED A");
+        potionMessageLabel.setForeground(Color.WHITE);
+        potionMessageLabel.setFont(customFont.deriveFont(Font.BOLD, 8)); // Use custom font
+        potionMessageLabel.setBounds(78, 25, 260, 30); // Set bounds for the potion message
+
+        JLabel potionMessagesLabel = new JLabel("HEALTH POTION!");
+        potionMessagesLabel.setForeground(Color.WHITE);
+        potionMessagesLabel.setFont(customFont.deriveFont(Font.BOLD, 8)); // Use custom font
+        potionMessagesLabel.setBounds(78, 40, 260, 30); // Set bounds for the potion message
+
+
+        // Create a close button
+        JButton closeButton = new JButton("OK");
+        closeButton.setBounds(230, 25, 40, 80); // Adjust position and size as needed
+        closeButton.setForeground(Color.WHITE);
+        closeButton.setOpaque(false);
+        closeButton.setContentAreaFilled(false);
+        closeButton.setBorderPainted(false);
+        closeButton.setFocusPainted(false);
+        closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Add action listener to the close button
+        closeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dialog.dispose(); // Close the dialog
+            }
+        });
+
+        panel.add(potionMessageLabel);
+        panel.add(potionMessagesLabel);
+        panel.add(closeButton); // Add the close button to the panel
+
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(frame);
+
+        // Make the dialog movable
+        final Point[] initialClick = {null};
+
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                initialClick[0] = e.getPoint(); // Store the initial click point
+            }
+        });
+
+        panel.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (initialClick[0] != null) {
+                    int thisX = dialog.getLocation().x;
+                    int thisY = dialog.getLocation().y;
+
+                    int xMoved = e.getX() - initialClick[0].x;
+                    int yMoved = e.getY() - initialClick[0].y;
+
+                    dialog.setLocation(thisX + xMoved, thisY + yMoved); // Move the dialog
+                }
+            }
+        });
+
+        dialog.setVisible(true); // Show the dialog
+    }
+
+    private void showNoHealthPotionMessage() {
+        JDialog dialog = new JDialog(frame, "Message", true);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                ImageIcon icon = new ImageIcon("C:\\Users\\riadyn\\Documents\\NetBeansProjects\\JavaApplication1\\gui\\infocard.png");
+                g.drawImage(icon.getImage(), 0, 0, getWidth(), getHeight(), this);
+            }
+        };
+        panel.setLayout(null); // Use null layout for absolute positioning
+        panel.setPreferredSize(new Dimension(280, 100)); // Adjust height for three messages
+        panel.setOpaque(false);
+
+        JLabel messageLabel = new JLabel("HEARTS ARE", JLabel.CENTER);
+        messageLabel.setForeground(Color.WHITE);
+        messageLabel.setFont(customFont.deriveFont(Font.BOLD, 8f)); // Use custom font
+        messageLabel.setBounds(0, 15, 260, 30); // Set bounds for the message
+        
+
+        JLabel fullLabel = new JLabel("FULL!", JLabel.CENTER);
+        fullLabel.setForeground(Color.WHITE);
+        fullLabel.setFont(customFont.deriveFont(Font.BOLD, 8f)); // Use custom font
+        fullLabel.setBounds(-25, 35, 260, 30); // Set bounds for the message
+
+        // Create a close button
+        JButton closeButton = new JButton("OK");
+        closeButton.setBounds(230, 25, 40, 80); // Adjust position and size as needed
+        closeButton.setForeground(Color.WHITE);
+        closeButton.setOpaque(false);
+        closeButton.setContentAreaFilled(false);
+        closeButton.setBorderPainted(false);
+        closeButton.setFocusPainted(false);
+        closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+
+        // Add action listener to the close button
+        closeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dialog.dispose(); // Close the dialog
+            }
+        });
+
+        panel.add(fullLabel);
+        panel.add(messageLabel);
+        panel.add(closeButton); // Add the close button to the panel
+
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(frame);
+
+        // Make the dialog movable
+        final Point[] initialClick = {null};
+
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                initialClick[0] = e.getPoint(); // Store the initial click point
+            }
+        });
+
+        panel.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (initialClick[0] != null) {
+                    int thisX = dialog.getLocation().x;
+                    int thisY = dialog.getLocation().y;
+
+                    int xMoved = e.getX() - initialClick[0].x;
+                    int yMoved = e.getY() - initialClick[0].y;
+
+                    dialog.setLocation(thisX + xMoved, thisY + yMoved); // Move the dialog
+                }
+            }
+        });
+
+        dialog.setVisible(true); // Show the dialog
     }
 
     public static void main(String[] args) {
